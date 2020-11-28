@@ -1,0 +1,14 @@
+material image/flamable
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture flamable.png
+      }
+    }
+  }
+}
+

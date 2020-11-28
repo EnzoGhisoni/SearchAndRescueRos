@@ -1,0 +1,14 @@
+material face/image
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture biohazard.png
+      }
+    }
+  }
+}
+

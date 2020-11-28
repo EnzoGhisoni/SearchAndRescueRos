@@ -1,0 +1,13 @@
+material image/alive
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture alive.png
+      }
+    }
+  }
+}

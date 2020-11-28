@@ -1,0 +1,14 @@
+material image/danger
+{
+  technique
+  {
+    pass
+    {
+      texture_unit
+      {
+        texture danger.png
+      }
+    }
+  }
+}
+
