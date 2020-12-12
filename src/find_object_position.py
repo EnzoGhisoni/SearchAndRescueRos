@@ -52,7 +52,7 @@ class FindPosition:
 				#print("The object is detected at : (x = " + str(ximage) + ", y = " + str(yimage) + ")")
 				# Value of x is between 0 and 600 (0 = -31.1 deg and 600 = 31.1 deg)
 				angle_deg = camera_min_angle + camera_angle_conv * ximage
-				print("Angle of the detected object" + str(int(angle_deg)))
+			print("Angle of the detected object" + str(int(angle_deg)))
 
 if __name__ == '__main__':
 	FindPosition()
