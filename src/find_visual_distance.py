@@ -9,6 +9,7 @@ from nav_msgs.msg import OccupancyGrid, Odometry
 from std_msgs.msg import Float32MultiArray
 from cv_bridge import CvBridge, CvBridgeError
 import sys
+from tf.transformations import euler_from_quaternion
 from nav_msgs.msg import Path
 from geometry_msgs.msg import PoseStamped
 from visualization_msgs.msg import Marker
@@ -17,6 +18,14 @@ from sensor_msgs.msg import LaserScan
 from PySide2.QtGui import QTransform
 from PySide2.QtCore import QPointF
 from math import *
+"""
+Run the camera view
+rosrun image_view image_view image:=/image_rectangle
+roslaunch integrated_robotics_project turtlebot3_search_and_rescue.launch
+rosrun find_object_2d find_object_2d image:=/camera/rgb/image_raw
+roslaunch turtlebot3_slam turtlebot3_slam.launch slam_methods:=frontier_exploration
+roslaunch explore_lite explore.launch
+"""
 
 bridge = CvBridge()
 
@@ -49,6 +58,7 @@ class Distance_estimation():
 		# variable updated in topic
 		self.actual_image = Image()
 		self.actual_odom = Odometry()
+		self.robot_yaw = 0
 		# image identification
 		self.image_alive = 11
 		self.image_toxic = 12
@@ -59,12 +69,18 @@ class Distance_estimation():
 		self.image_radioactive = 17
 		self.image_triangle = 18
 		self.image_dead = 19
+
+		self.object_distance = 0
+		self.object_angle = 0
 	
 	def image_callback(self, ros_image):
 		self.actual_image = ros_image
 
 	def odom_callback(self, ros_odom):
 		self.actual_odom = ros_odom
+		(_, _, self.robot_yaw) = euler_from_quaternion([ros_odom.pose.pose.orientation.x, 
+				 ros_odom.pose.pose.orientation.y, ros_odom.pose.pose.orientation.z, ros_odom.pose.pose.orientation.w], 
+				 'sxyz')
 
 		"""
 		image_to_send = np.zeros((384, 384, 1), np.uint8)
@@ -179,6 +195,10 @@ class Distance_estimation():
 		image_width_px = 1920
 		focal_length_px = (focal_length_mm /sensor_width_mm) * image_width_px
 
+		camera_angle_conv = 0.0334
+		camera_min_angle = -31.1
+		camera_max_angle = 31.1
+
 		object_size = 1
 		diagonal_cube = sqrt(2)
 		cv_image = self.bridge.imgmsg_to_cv2(self.actual_image, "bgr8")
@@ -202,11 +222,19 @@ class Distance_estimation():
 				ximage = qtBottomRight.x() - (qtBottomRight.x() - qtBottomLeft.x()) / 2
 				yimage = qtBottomRight.y() - (qtBottomRight.y() - qtTopRight.y()) / 2
 
-			#cv2.rectangle(image, (xg, yg), (xg + wg, yg + hg), (0, 255, 0), 2)
-			cv2.rectangle(cv_image, (int(qtTopLeft.x()), int(qtTopLeft.y())), (int(qtBottomRight.x()), int(qtBottomRight.y())), (0, 255, 0), 2)
-			image_message = bridge.cv2_to_imgmsg(cv_image, "bgr8")
 			distance = (focal_length_px * object_size) / height
+			self.object_distance = distance
+			angle_deg = int(camera_min_angle + camera_angle_conv * ximage)
+			self.object_angle = angle_deg
+			# Draw the rectangle around the object
+			font = cv2.FONT_HERSHEY_SIMPLEX
+			cv2.rectangle(cv_image, (int(qtTopLeft.x()), int(qtTopLeft.y())), (int(qtBottomRight.x()), int(qtBottomRight.y())), (0, 255, 0), 2)
+			cv2.putText(cv_image, str(round(distance, 2)) + "m and " + str(round(angle_deg, 2)) + "degree", (int(qtTopLeft.x()), int(qtTopLeft.y())), font, 2, (255, 0, 255), 2)
+			#cv2.putText(cv_image, str(round(distance, 2)) + "m", (int(qtTopLeft.x()), int(qtTopLeft.y())), font, 2, (255, 0, 255), 2)
+			image_message = bridge.cv2_to_imgmsg(cv_image, "bgr8")
 			print(distance)
+			
+			
 			self.img.publish(image_message)
 			
 		else:
@@ -224,9 +252,12 @@ class Distance_estimation():
 		
 
 		#self.robotMarker.pose.position = self.odom.pose.pose.position
-		
-		self.robotMarker.pose.position.x = self.actual_odom.pose.pose.position.x
-		self.robotMarker.pose.position.y = self.actual_odom.pose.pose.position.y
+		absolut_angle = self.robot_yaw - radians(self.object_angle)
+		print(self.object_angle)
+		print(self.robot_yaw)
+		print(absolut_angle)
+		self.robotMarker.pose.position.x = self.actual_odom.pose.pose.position.x + self.object_distance * cos(absolut_angle)
+		self.robotMarker.pose.position.y = self.actual_odom.pose.pose.position.y + self.object_distance * sin(absolut_angle)
 		self.robotMarker.id = self.count
 		self.robotMarker.scale.x = 0.1
 		self.robotMarker.scale.y = 0.1
