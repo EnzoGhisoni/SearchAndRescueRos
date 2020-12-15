@@ -60,10 +60,10 @@ class Distance_estimation():
 		self.actual_odom = Odometry()
 		self.robot_yaw = 0
 		# image identification
-		self.image_alive = 11
+		self.image_person = 11
 		self.image_toxic = 12
 		self.image_warning = 13
-		self.image_injured = 14
+		#self.image_injured = 14
 		self.image_fire = 15
 		self.image_no_smoke = 16
 		self.image_radioactive = 17
@@ -72,6 +72,10 @@ class Distance_estimation():
 
 		self.object_distance = 0
 		self.object_angle = 0
+
+		# people state
+		self.alive = 0
+		self.injured = 1
 	
 	def image_callback(self, ros_image):
 		self.actual_image = ros_image
@@ -109,11 +113,16 @@ class Distance_estimation():
 			#if(self.current_time - self.passed_time > rospy.Duration(1)):
 			#TODO Define for each objects
 			self.draw_rectangle_on_roi(object_found)
-			if (object_found.data[0] == self.image_alive):
+
+			if (object_found.data[0] == self.image_person):
 				#Add a color detector with openCV
-				print('Alive person found')
-				self.createMarker(Shape.SPHERE, 0.0, 1.0, 0.0)
-			
+				state = self.detect_people_state()
+				if(state == self.alive):
+					print('Alive person found')
+					self.createMarker(Shape.SPHERE, 0.0, 1.0, 0.0)
+				else:
+					print('Injured person found')
+					self.createMarker(Shape.SPHERE, 1.0, 0.0, 0.0)
 				self.markerPub.publish(self.robotMarker)
 				self.count = self.count + 1
 				self.passed_time = rospy.get_rostime()
@@ -133,7 +142,7 @@ class Distance_estimation():
 				self.markerPub.publish(self.robotMarker)
 				self.count = self.count + 1
 				self.passed_time = rospy.get_rostime()
-
+			"""
 			if (object_found.data[0] == self.image_injured):
 				#Add a color detector with openCV
 				print('Injured person found')
@@ -141,7 +150,7 @@ class Distance_estimation():
 				self.markerPub.publish(self.robotMarker)
 				self.count = self.count + 1
 				self.passed_time = rospy.get_rostime()
-
+			"""
 			if (object_found.data[0] == self.image_fire):
 				#Add a color detector with openCV
 				print('Fire found')
@@ -266,6 +275,40 @@ class Distance_estimation():
 		self.robotMarker.color.g = color_g;
 		self.robotMarker.color.b = color_b;
 		self.robotMarker.color.a = 1.0;
+
+	"""
+	this function takes the last image capture and look for green or red
+	if red detected = injured, green = alive
+	"""
+	def detect_people_state(self):
+		widght = 0
+		height = 0
+		# We use cv bridge to convert the image in opencv format
+		cv_people_image = self.bridge.imgmsg_to_cv2(self.actual_image, "bgr8")
+		hsv = cv2.cvtColor(cv_people_image, cv2.COLOR_BGR2HSV)
+		#redLower = (0, 0, 30)
+		#redUpper = (80, 80, 255)
+		#redmask = cv2.inRange(hsv, redLower, redUpper)
+		# define a mask using the lower and upper bound of the green color
+		greenLower = (40, 40,40)
+		greenUpper = (70, 255,255)
+		greenmask = cv2.inRange(hsv, greenLower, greenUpper)
+		cv2.imshow("Green Mask", greenmask)
+		cv2.waitKey(1)
+
+		_, contours, _ = cv2.findContours(greenmask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+		if len(contours) > 0:
+			green_area = max(contours, key=cv2.contourArea)
+			(xg, yg, widght, height) = cv2.boundingRect(green_area)
+			print("widght and height : ("+ str(widght) +", "+str(height))
+		# Check a minimal size of mask to avoid false detections
+		if(widght > 10 and height > 10):
+			state = self.alive
+		else:
+			state = self.injured
+		return state
+
+
 
 class Shape(IntEnum):
 	CUBE = 1
