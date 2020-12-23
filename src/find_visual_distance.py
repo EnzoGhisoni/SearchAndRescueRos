@@ -72,10 +72,15 @@ class Distance_estimation():
 
 		self.object_distance = 0
 		self.object_angle = 0
+		self.listMeanMarker = []
 
 		# people state
 		self.alive = 0
 		self.injured = 1
+		self.person_state = 0
+
+		self.mean_counter = 0
+		self.previous_ref_marker = 0
 	
 	def image_callback(self, ros_image):
 		self.actual_image = ros_image
@@ -118,6 +123,7 @@ class Distance_estimation():
 
 
 	def draw_rectangle_on_roi(self, object_found):
+
 		data = object_found.data
 		focal_length_mm = 3.04
 		sensor_width_mm = 3.68
@@ -159,9 +165,9 @@ class Distance_estimation():
 				# Draw the rectangle around the object
 				font = cv2.FONT_HERSHEY_SIMPLEX
 				cv2.rectangle(cv_image, (int(qtTopLeft.x()), int(qtTopLeft.y())), (int(qtBottomRight.x()), int(qtBottomRight.y())), (0, 255, 0), 2)
-				cv2.putText(cv_image, str(round(distance, 2)) + "m and " + str(round(angle_deg, 2)) + "degree", (int(qtTopLeft.x()), int(qtTopLeft.y())), font, 2, (255, 0, 255), 2)
+				cv2.putText(cv_image, "("+str(round(distance, 2)) + "m," + str(round(angle_deg, 2)) + "degree" + ")", (int(qtTopLeft.x()), int(qtTopLeft.y())), font, 2, (255, 0, 255), 2)
 				#cv2.putText(cv_image, str(round(distance, 2)) + "m", (int(qtTopLeft.x()), int(qtTopLeft.y())), font, 2, (255, 0, 255), 2)
-				image_message = bridge.cv2_to_imgmsg(cv_image, "bgr8")
+				image_message = self.bridge.cv2_to_imgmsg(cv_image, "bgr8")
 				print(distance)
 				
 				if (object_found.data[i] == self.image_person):
@@ -170,77 +176,51 @@ class Distance_estimation():
 					if(state == self.alive):
 						print('Alive person found')
 						self.createMarker(Shape.SPHERE, 0.0, 1.0, 0.0)
+						self.createMeanMarker(Shape.SPHERE, 0.0, 1.0, 0.0, object_found.data[i])
 					else:
 						print('Injured person found')
 						self.createMarker(Shape.SPHERE, 1.0, 0.0, 0.0)
-					self.markerPub.publish(self.robotMarker)
-					self.count = self.count + 1
-					self.passed_time = rospy.get_rostime()
+						self.createMeanMarker(Shape.CUBE, 1.0, 0.0, 0.0, object_found.data[i])
+					self.person_state = state
+					
 
 				if (object_found.data[i] == self.image_toxic):
 					#Add a color detector with openCV
 					print('Toxic area found')
 					self.createMarker(Shape.SPHERE, 0.0, 0.0, 0.0)
-					self.markerPub.publish(self.robotMarker)
-					self.count = self.count + 1
-					self.passed_time = rospy.get_rostime()
+					self.createMeanMarker(Shape.SPHERE, 0.0, 0.0, 0.0, object_found.data[i])
 
 				if (object_found.data[i] == self.image_warning):
 					#Add a color detector with openCV
 					print('Warning are found')
-					self.createMarker(Shape.CUBE, 1.0, 0.0, 0.0)
-					self.markerPub.publish(self.robotMarker)
-					self.count = self.count + 1
-					self.passed_time = rospy.get_rostime()
-				"""
-				if (object_found.data[0] == self.image_injured):
-					#Add a color detector with openCV
-					print('Injured person found')
-					self.createMarker(Shape.SPHERE, 1.0, 0.0, 0.0)
-					self.markerPub.publish(self.robotMarker)
-					self.count = self.count + 1
-					self.passed_time = rospy.get_rostime()
-				"""
+					self.createMarker(Shape.CUBE, 1.0, 0.0, 1.0)
+					self.createMeanMarker(Shape.CUBE, 1.0, 0.0, 0.0, object_found.data[i])
+					
 				if (object_found.data[i] == self.image_fire):
 					#Add a color detector with openCV
 					print('Fire found')
-					self.createMarker(Shape.CYLINDER, 1.0, 0.0, 0.0)
-					self.markerPub.publish(self.robotMarker)
-					self.count = self.count + 1
-					self.passed_time = rospy.get_rostime()
+					self.createMarker(Shape.CYLINDER, 1.0, 0.5, 0.0)
+					self.createMeanMarker(Shape.CYLINDER, 1.0, 0.5, 0.0, object_found.data[i])
 
 				if (object_found.data[i] == self.image_no_smoke):
 					#Add a color detector with openCV
 					print('Radioactive area found')
 					self.createMarker(Shape.CUBE, 0.5, 0.5, 0.5)
-					self.markerPub.publish(self.robotMarker)
-					self.count = self.count + 1
-					self.passed_time = rospy.get_rostime()
+					self.createMeanMarker(Shape.CUBE, 0.5, 0.5, 0.5, object_found.data[i])
+				
 
 				if (object_found.data[i] == self.image_radioactive):
 					#Add a color detector with openCV
 					print('Radioactive area found')
 					self.createMarker(Shape.CUBE, 1.0, 1.0, 0.0)
-					self.markerPub.publish(self.robotMarker)
-					self.count = self.count + 1
-					self.passed_time = rospy.get_rostime()
+					self.createMeanMarker(Shape.CUBE, 1.0, 1.0, 0.0, object_found.data[i])
 
 				if (object_found.data[i] == self.image_dead):
 					#Add a color detector with openCV
-					print('Object 14 found')
-					self.createMarker(Shape.CUBE, 1.0, 0.0, 0.0)
-					self.markerPub.publish(self.robotMarker)
-					self.count = self.count + 1
-					self.passed_time = rospy.get_rostime()
-
-				if (object_found.data[i] == self.image_dead):
-					#Add a color detector with openCV
-					print('Object 14 found')
+					print('Radioactive area found')
 					self.createMarker(Shape.SPHERE, 0.0, 0.0, 0.0)
-					self.markerPub.publish(self.robotMarker)
-					self.count = self.count + 1
-					self.passed_time = rospy.get_rostime()
-
+					self.createMeanMarker(Shape.SPHERE, 0.0, 0.0, 0.0, object_found.data[i])
+					
 				else:
 					print("No object found")
 			self.img.publish(image_message)
@@ -257,16 +237,15 @@ class Distance_estimation():
 		self.robotMarker.action = Marker.ADD
 		self.robotMarker.pose.position = self.actual_odom.pose.pose.position
 		
-		
-
 		#self.robotMarker.pose.position = self.odom.pose.pose.position
 		absolut_angle = self.robot_yaw - radians(self.object_angle)
-		print(self.object_angle)
-		print(self.robot_yaw)
-		print(absolut_angle)
+		#print(self.object_angle)
+		#print(self.robot_yaw)
+		#print(absolut_angle)
 		self.robotMarker.pose.position.x = self.actual_odom.pose.pose.position.x + self.object_distance * cos(absolut_angle)
 		self.robotMarker.pose.position.y = self.actual_odom.pose.pose.position.y + self.object_distance * sin(absolut_angle)
 		self.robotMarker.id = self.count
+
 		self.robotMarker.scale.x = 0.1
 		self.robotMarker.scale.y = 0.1
 		self.robotMarker.scale.z = 0.1
@@ -274,6 +253,138 @@ class Distance_estimation():
 		self.robotMarker.color.g = color_g;
 		self.robotMarker.color.b = color_b;
 		self.robotMarker.color.a = 1.0;
+		#self.markerPub.publish(self.robotMarker)
+		self.count = self.count + 1
+		self.passed_time = rospy.get_rostime()
+
+	def computeMeanMarkers(self, marker_ID):
+		min_size_list = 3
+		x_mean = 0
+		y_mean = 0
+		# Create new object Marker to store in the list
+		absolut_angle = self.robot_yaw - radians(self.object_angle)
+		x_marker = self.actual_odom.pose.pose.position.x + self.object_distance * cos(absolut_angle)
+		y_marker = self.actual_odom.pose.pose.position.y + self.object_distance * sin(absolut_angle)
+
+		robotMarker = ObjectMarkerInformation(marker_ID, x_marker, y_marker)
+
+		
+		if(robotMarker.ref_object == self.previous_ref_marker):
+			self.markerPub.publish(self.robotMarker)
+			print("Add the new marker")
+			self.listMeanMarker.append(robotMarker)
+			self.mean_counter+=1
+		else:
+			print('Compute the mean')
+			#if(len(self.listMeanMarker) > min_size_list):
+			if(self.mean_counter > min_size_list):
+				#print("Size of the list = " + str(len(self.listMeanMarker)))
+				#for i in range(0, self.mean_counter):
+				nb_marker = 0
+				for i in range(0, len(self.listMeanMarker)):
+					x_mean += self.listMeanMarker[i].x
+					y_mean += self.listMeanMarker[i].y
+					nb_marker = nb_marker + 1
+
+				print("Size list is :" + str(self.mean_counter))
+				print("Counter is :"+ str(nb_marker))
+				# Create mean marker
+				#self.robotMarker.pose.position.x = x_mean / (len(self.listMeanMarker))
+				#self.robotMarker.pose.position.y = y_mean / (len(self.listMeanMarker))
+				self.robotMarker.pose.position.x = x_mean / (nb_marker)
+				self.robotMarker.pose.position.y = y_mean / (nb_marker)
+				self.robotMarker.id = self.count
+				self.robotMarker.scale.x = 0.5
+				self.robotMarker.scale.y = 0.5
+				self.robotMarker.scale.z = 0.5
+				if (self.previous_ref_marker == self.image_person):
+				
+					if(self.person_state == self.alive):
+						print('Alive person found')
+						self.robotMarker.color.r = 0.0;
+						self.robotMarker.color.g = 1.0;
+						self.robotMarker.color.b = 0.0;
+
+					else:
+						print('Injured person found')
+						self.robotMarker.color.r = 1.0;
+						self.robotMarker.color.g = 0.0;
+						self.robotMarker.color.b = 0.0;
+					
+				if (self.previous_ref_marker == self.image_toxic):
+					#Add a color detector with openCV
+					print('Toxic area found')
+					self.robotMarker.color.r = 0.0;
+					self.robotMarker.color.g = 0.0;
+					self.robotMarker.color.b = 0.0;
+
+				if (self.previous_ref_marker == self.image_warning):
+					#Add a color detector with openCV
+					print('Warning are found')
+					self.robotMarker.color.r = 1.0;
+					self.robotMarker.color.g = 0.0;
+					self.robotMarker.color.b = 1.0;
+					
+					
+				if (self.previous_ref_marker == self.image_fire):
+					#Add a color detector with openCV
+					print('Fire found')
+					self.robotMarker.color.r = 1.0;
+					self.robotMarker.color.g = 0.5;
+					self.robotMarker.color.b = 0.0;
+
+				if (self.previous_ref_marker == self.image_no_smoke):
+					#Add a color detector with openCV
+					print('Radioactive area found')
+					self.robotMarker.color.r = 0.5;
+					self.robotMarker.color.g = 0.5;
+					self.robotMarker.color.b = 0.5;
+				
+				if (self.previous_ref_marker == self.image_radioactive):
+					#Add a color detector with openCV
+					print('Radioactive area found')
+					self.robotMarker.color.r = 1.0;
+					self.robotMarker.color.g = 1.0;
+					self.robotMarker.color.b = 0.0;
+
+				if (self.previous_ref_marker == self.image_dead):
+					#Add a color detector with openCV
+					print('Radioactive area found')
+					self.robotMarker.color.r = 0.0;
+					self.robotMarker.color.g = 0.0;
+					self.robotMarker.color.b = 0.0;
+				
+				self.robotMarker.color.a = 1.0;
+				self.markerPub.publish(self.robotMarker)
+				print('List published so cleaned')
+				del self.listMeanMarker[:]
+				#print('List is clean: ' + str(self.listMeanMarker))
+				self.count = self.count + 1
+				self.mean_counter = 0
+				self.passed_time = rospy.get_rostime()
+			else:
+				print("Serie to short")
+				print('List cleaned')
+				del self.listMeanMarker[:]
+		
+		self.previous_ref_marker = marker_ID
+
+	def createMeanMarker(self, shape, color_r, color_g, color_b, marker_ID):
+		
+			
+		self.robotMarker = Marker()
+		self.robotMarker.header.frame_id = 'odom'
+		self.robotMarker.header.stamp = rospy.Time.now()
+		self.robotMarker.type = shape
+		self.robotMarker.action = Marker.ADD
+		
+		self.robotMarker.color.r = color_r;
+		self.robotMarker.color.g = color_g;
+		self.robotMarker.color.b = color_b;
+		
+		self.computeMeanMarkers(marker_ID)
+
+
 
 	"""
 	this function takes the last image capture and look for green or red
@@ -292,8 +403,6 @@ class Distance_estimation():
 		greenLower = (40, 40,40)
 		greenUpper = (70, 255,255)
 		greenmask = cv2.inRange(hsv, greenLower, greenUpper)
-		#cv2.imshow("Green Mask", greenmask)
-		#cv2.waitKey(1)
 
 		_, contours, _ = cv2.findContours(greenmask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 		if len(contours) > 0:
@@ -307,6 +416,12 @@ class Distance_estimation():
 			state = self.injured
 		return state
 
+class ObjectMarkerInformation():
+  """Object to contain the marker"""
+  def __init__(self, ref_object, x, y):
+	self.ref_object = ref_object
+	self.x = x
+	self.y = y
 
 
 class Shape(IntEnum):
