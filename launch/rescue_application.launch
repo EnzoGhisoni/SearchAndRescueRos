@@ -5,11 +5,12 @@
 	<arg name="objects_path" default="$(find integrated_robotics_project)/world/objects"/>
 	<arg name="settings_path" default="$(find integrated_robotics_project)/world/find_object_2d_params"/>
 
-	<!--include file="/opt/ros/kinetic/share/turtlebot3_gazebo/launch/turtlebot3_house.launch"/-->
+	<include file="$(find integrated_robotics_project)/launch/start_navigation_turtlebot3_gmapping.launch"/>
 	<node pkg="web_video_server" type="web_video_server" name="web_video_server" output="screen"/>
 	<node pkg="rosbridge_server" type="rosbridge_websocket.py" name="rosbridge_websocket" output="screen"/>
 	<node pkg="integrated_robotics_project" type="find_visual_distance.py" name="distance_estimation" output="screen"/>
-
+	<node pkg="integrated_robotics_project" type="navigation_goal_on_click.py" name="goal_on_click" output="screen"/>
+	<node pkg="integrated_robotics_project" type="generate_image_from_odom_occupancy.py" name="map_creator" output="screen"/>
 	<node name="find_object_2d" pkg="find_object_2d" type="find_object_2d" output="screen">
 		<remap from="image" to="$(arg image_topic)"/>
 		<param name="gui" value="$(arg gui)" type="bool"/>

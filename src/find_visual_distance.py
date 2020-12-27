@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-
+# -*- coding: utf-8 -*-
 import rospy
 import cv2
 import numpy as np
@@ -132,7 +132,7 @@ class Distance_estimation():
 		focal_length_px = (focal_length_mm /sensor_width_mm) * image_width_px
 
 		#camera_angle_conv = 0.0334
-		camera_angle_conv = 0.10366
+		camera_angle_conv = 0.0971
 		camera_min_angle = -31.1
 		camera_max_angle = 31.1
 
@@ -165,7 +165,7 @@ class Distance_estimation():
 				# Draw the rectangle around the object
 				font = cv2.FONT_HERSHEY_SIMPLEX
 				cv2.rectangle(cv_image, (int(qtTopLeft.x()), int(qtTopLeft.y())), (int(qtBottomRight.x()), int(qtBottomRight.y())), (0, 255, 0), 2)
-				cv2.putText(cv_image, "("+str(round(distance, 2)) + "m," + str(round(angle_deg, 2)) + "degree" + ")", (int(qtTopLeft.x()), int(qtTopLeft.y())), font, 2, (255, 0, 255), 2)
+				cv2.putText(cv_image, "("+str(round(distance, 2)) + "m," + str(round(angle_deg, 2)) + "deg" + ")", (int(qtTopLeft.x()), int(qtTopLeft.y())), font, 1, (255, 0, 255), 2)
 				#cv2.putText(cv_image, str(round(distance, 2)) + "m", (int(qtTopLeft.x()), int(qtTopLeft.y())), font, 2, (255, 0, 255), 2)
 				image_message = self.bridge.cv2_to_imgmsg(cv_image, "bgr8")
 				print(distance)
@@ -253,7 +253,7 @@ class Distance_estimation():
 		self.robotMarker.color.g = color_g;
 		self.robotMarker.color.b = color_b;
 		self.robotMarker.color.a = 1.0;
-		#self.markerPub.publish(self.robotMarker)
+		self.markerPub.publish(self.robotMarker)
 		self.count = self.count + 1
 		self.passed_time = rospy.get_rostime()
 
@@ -291,8 +291,8 @@ class Distance_estimation():
 				# Create mean marker
 				#self.robotMarker.pose.position.x = x_mean / (len(self.listMeanMarker))
 				#self.robotMarker.pose.position.y = y_mean / (len(self.listMeanMarker))
-				self.robotMarker.pose.position.x = x_mean / (nb_marker)
-				self.robotMarker.pose.position.y = y_mean / (nb_marker)
+				self.robotMarker.pose.position.x = x_mean / (2*(nb_marker))
+				self.robotMarker.pose.position.y = y_mean / (2*(nb_marker))
 				self.robotMarker.id = self.count
 				self.robotMarker.scale.x = 0.5
 				self.robotMarker.scale.y = 0.5
@@ -304,12 +304,14 @@ class Distance_estimation():
 						self.robotMarker.color.r = 0.0;
 						self.robotMarker.color.g = 1.0;
 						self.robotMarker.color.b = 0.0;
+						self.robotMarker.type = Shape.SPHERE
 
 					else:
 						print('Injured person found')
 						self.robotMarker.color.r = 1.0;
 						self.robotMarker.color.g = 0.0;
 						self.robotMarker.color.b = 0.0;
+						self.robotMarker.type = Shape.SPHERE
 					
 				if (self.previous_ref_marker == self.image_toxic):
 					#Add a color detector with openCV
@@ -317,6 +319,7 @@ class Distance_estimation():
 					self.robotMarker.color.r = 0.0;
 					self.robotMarker.color.g = 0.0;
 					self.robotMarker.color.b = 0.0;
+					self.robotMarker.type = Shape.SPHERE
 
 				if (self.previous_ref_marker == self.image_warning):
 					#Add a color detector with openCV
@@ -324,6 +327,7 @@ class Distance_estimation():
 					self.robotMarker.color.r = 1.0;
 					self.robotMarker.color.g = 0.0;
 					self.robotMarker.color.b = 1.0;
+					self.robotMarker.type = Shape.CUBE
 					
 					
 				if (self.previous_ref_marker == self.image_fire):
@@ -332,6 +336,7 @@ class Distance_estimation():
 					self.robotMarker.color.r = 1.0;
 					self.robotMarker.color.g = 0.5;
 					self.robotMarker.color.b = 0.0;
+					self.robotMarker.type = Shape.CYLINDER
 
 				if (self.previous_ref_marker == self.image_no_smoke):
 					#Add a color detector with openCV
@@ -339,6 +344,7 @@ class Distance_estimation():
 					self.robotMarker.color.r = 0.5;
 					self.robotMarker.color.g = 0.5;
 					self.robotMarker.color.b = 0.5;
+					self.robotMarker.type = Shape.CUBE
 				
 				if (self.previous_ref_marker == self.image_radioactive):
 					#Add a color detector with openCV
@@ -346,6 +352,7 @@ class Distance_estimation():
 					self.robotMarker.color.r = 1.0;
 					self.robotMarker.color.g = 1.0;
 					self.robotMarker.color.b = 0.0;
+					self.robotMarker.type = Shape.CUBE
 
 				if (self.previous_ref_marker == self.image_dead):
 					#Add a color detector with openCV
@@ -353,6 +360,7 @@ class Distance_estimation():
 					self.robotMarker.color.r = 0.0;
 					self.robotMarker.color.g = 0.0;
 					self.robotMarker.color.b = 0.0;
+					self.robotMarker.type = Shape.CUBE
 				
 				self.robotMarker.color.a = 1.0;
 				self.markerPub.publish(self.robotMarker)
@@ -403,12 +411,15 @@ class Distance_estimation():
 		greenLower = (40, 40,40)
 		greenUpper = (70, 255,255)
 		greenmask = cv2.inRange(hsv, greenLower, greenUpper)
-
+		cv2.imshow("Green Mask", greenmask)
+		cv2.waitKey(1)
+		
 		_, contours, _ = cv2.findContours(greenmask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 		if len(contours) > 0:
 			green_area = max(contours, key=cv2.contourArea)
 			(xg, yg, widght, height) = cv2.boundingRect(green_area)
 			print("widght and height : ("+ str(widght) +", "+str(height))
+
 		# Check a minimal size of mask to avoid false detections
 		if(widght > 10 and height > 10):
 			state = self.alive
