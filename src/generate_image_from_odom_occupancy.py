@@ -38,7 +38,7 @@ class ROS_image_occupancy_creator():
 		image = np.zeros((ros_occupancy.info.height, ros_occupancy.info.width, 1), np.uint8)
 		self.map_info = ros_occupancy.info
 		self.occupancy = ros_occupancy.data
-		raw_data = np.reshape(ros_occupancy.data, (-1, ros_occupancy.info.height))
+		raw_data = np.reshape(ros_occupancy.data, (-1, max(ros_occupancy.info.width, ros_occupancy.info.height)))
 		#print (raw_data)
 		#cv2.imshow("Image Panel", image)
 		# convert ros_occupancy into an opencv-compatible image
