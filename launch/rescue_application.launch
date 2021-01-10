@@ -1,5 +1,6 @@
 <launch>
 	<include file="$(find integrated_robotics_project)/launch/turtlebot3_search_and_rescue.launch"/>
+	<!--include file="$(find integrated_robotics_project)/launch/start_explore_lite.launch"/-->
 	<arg name="gui" default="true"/>
 	<arg name="image_topic" default="/camera/rgb/image_raw"/>
 	<arg name="objects_path" default="$(find integrated_robotics_project)/world/objects"/>

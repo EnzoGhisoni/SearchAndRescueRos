@@ -70,6 +70,7 @@ class Distance_estimation():
 		self.image_radioactive = 17
 		self.image_triangle = 18
 		self.image_dead = 19
+		self.injured = 20
 
 		self.object_distance = 0
 		self.object_angle = 0
@@ -130,7 +131,7 @@ class Distance_estimation():
 		sensor_width_mm = 3.68
 		#image_width_px = 1920
 		image_width_px = 640
-		focal_length_px = (focal_length_mm /sensor_width_mm) * image_width_px
+		focal_length_px = (focal_length_mm / sensor_width_mm) * image_width_px
 
 		#camera_angle_conv = 0.0334
 		camera_angle_conv = 0.0971
@@ -253,7 +254,7 @@ class Distance_estimation():
 		self.robotMarker.color.r = color_r;
 		self.robotMarker.color.g = color_g;
 		self.robotMarker.color.b = color_b;
-		self.robotMarker.color.a = 1.0;
+		self.robotMarker.color.a = 0.5;
 		self.markerPub.publish(self.robotMarker)
 		self.count = self.count + 1
 		self.passed_time = rospy.get_rostime()
@@ -362,6 +363,21 @@ class Distance_estimation():
 				self.robotMarker.type = Shape.CUBE
 			
 			self.robotMarker.color.a = 1.0;
+
+			# Publication of the Mean point
+			self.markerPub.publish(self.robotMarker)
+
+			# Publication to use in the map recreated
+			# in this case, we going to use the ID to store the data type
+			self.robotMarker.id = self.previous_ref_marker
+
+			# Manage the ID if person detected
+			if (self.previous_ref_marker == self.image_person):
+				if(self.person_state == self.alive):
+					self.robotMarker.id = self.image_person
+				else:
+					self.robotMarker.id = self.injured
+
 			self.markerMeanPub.publish(self.robotMarker)
 			print('List published so cleaned')
 			#del self.listMeanMarker[:]
